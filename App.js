@@ -1,48 +1,63 @@
-import React, { useState, useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, SafeAreaView, FlatList } from 'react-native';
-import { ListItem } from "./components/ListItem";
-import dummyArticles from "./dummies/articles.json";
-import axios from "axios";
-import Constants from 'expo-constants';
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { FontAwesome } from "@expo/vector-icons";
+import { Provider } from 'react-redux';
 
-const URL = `https://newsapi.org/v2/top-headlines?country=jp&category=business&apiKey=${Constants.manifest.extra.newsApiKey}`
+import { store, persistor } from './store';
+import { HomeScreen } from "./screens/HomeScreen";
+import { ArticleScreen } from './screens/ArticleScreen';
+import { ClipScreen } from './screens/ClipScreen';
+import { PersistGate } from 'redux-persist/integration/react';
 
-export default function App() {
-  const [articles, setArticles] = useState([]);
-  const fetchArticles = async () => {
-    try {
-      const response = await axios.get(URL);
-      setArticles(response.data.articles);
-    } catch(error){
-      console.error(error);
+const Stack = createNativeStackNavigator();
+const Tab = createBottomTabNavigator();
+
+const screenOption = ({ route }) => ({
+  tabBarIcon: ({ color, size }) => {
+    if (route.name === 'HomeTab') {
+      return <FontAwesome name="home" size={size} color={color} />;
+    } else if (route.name === 'ClipTab') {
+      return <FontAwesome name="bookmark" size={size} color={color} />;
     }
-  };
+    return null; // 追加: それ以外の場合は何も返さない
+  },
+});
 
-  useEffect(() => {
-    fetchArticles();
-  }, []);
+
+
+const HomeStack = () => {
   return (
-    <SafeAreaView style={styles.container}>
-      <FlatList 
-        data={articles}
-        renderItem={({ item }) => (
-          <ListItem 
-            imageUrl={item.urlToImage} 
-            title={item.title} 
-            author={item.author} 
-          /> 
-        )}
-        keyExtractor={(item, index) => index.toString()}
-      />
-      <StatusBar style="auto" />
-    </SafeAreaView>
+    <Stack.Navigator>
+      <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Article" component={ArticleScreen} />
+    </Stack.Navigator>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#eee',
-  }
-});
+const ClipStack = () => {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="Clip" component={ClipScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Article" component={ArticleScreen} />
+    </Stack.Navigator>
+  );
+}
+
+export default function App() {
+  return (
+    <Provider store={store}>
+      <PersistGate loading={null} persistor={persistor}>
+        <NavigationContainer>
+          <Tab.Navigator
+            screenOptions={screenOption}
+          >
+            <Tab.Screen name="HomeTab" component={HomeStack} options={{ headerShown: false, title: "Home" }} />
+            <Tab.Screen name="ClipTab" component={ClipStack} options={{ headerShown: false, title: "Clip" }} />
+          </Tab.Navigator>
+        </NavigationContainer>
+      </PersistGate>
+    </Provider>
+  );
+}
